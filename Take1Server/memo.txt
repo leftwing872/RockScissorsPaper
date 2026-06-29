@@ -1,0 +1,63 @@
+dotnet new console -n GameClient
+
+dotnet build
+dotnet run
+dotnet --list-sdks
+dotnet --list-runtimes
+
+dotnet ./GameServer.dll 
+
+
+dotnet add package AWSSDK.Core --version 4.0.0-preview.4
+dotnet add package AWSSDK.GameLift --version 4.0.0-preview.4
+dotnet add package websocketsharp.core --version 1.0.1
+dotnet add package log4net --version 3.0.3
+dotnet add package Newtonsoft.Json --version 13.0.3
+dotnet add package Polly --version 8.5.0
+
+dotnet add reference GameLiftServerSDK/GameLiftServerSDK.csproj 
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.Core" Version="4.0.0-preview.4" />
+    <PackageReference Include="AWSSDK.GameLift" Version="4.0.0-preview.4" />
+    <Reference Include="GameLiftServerSDK">
+      <HintPath>dll/GameLiftServerSDK.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+
+dotnet publish --framework net6.0 -c debug -r linux-x64 -p:PublishSingleFile=true --self-contained false
+
+linux-x64 % zip -r server-01.zip local/ install.sh
+
+1. Deregister your server
+aws gamelift deregister-compute --fleet-id fleet-00000000-0000-0000-0000-000000000000 --compute-name example-compute
+
+2. Register your server
+aws gamelift register-compute --compute-name {compute-name} --fleet-id {fleet-id}  --ip-address {server-ip-address} --location {your-custom-location}
+aws gamelift register-compute --compute-name example-compute --fleet-id arn:aws:gamelift:ap-northeast-1:000000000000:fleet/fleet-00000000-0000-0000-0000-000000000000 --ip-address 0.0.0.0 --location custom-example-compute
+{
+    "Compute": {
+        "FleetId": "fleet-00000000-0000-0000-0000-000000000000",
+        "FleetArn": "arn:aws:gamelift:ap-northeast-1:000000000000:fleet/fleet-00000000-0000-0000-0000-000000000000",
+        "ComputeName": "example-compute",
+        "ComputeArn": "arn:aws:gamelift:ap-northeast-1:000000000000:compute/example-compute",
+        "IpAddress": "0.0.0.0",
+        "ComputeStatus": "Active",
+        "Location": "custom-example-compute",
+        "CreationTime": "2025-01-07T10:42:07.788000+09:00",
+        "GameLiftServiceSdkEndpoint": "wss://ap-northeast-1.api.amazongamelift.com",
+        "GameLiftAgentEndpoint": "wss://ap-northeast-1.process-manager-api.amazongamelift.com"
+    }
+}
+
+aws gamelift get-compute-auth-token --fleet-id {fleet-id} --compute-name {compute-name}
+aws gamelift get-compute-auth-token --fleet-id fleet-00000000-0000-0000-0000-000000000000 --compute-name example-compute
+{
+    "FleetId": "fleet-00000000-0000-0000-0000-000000000000",
+    "FleetArn": "arn:aws:gamelift:ap-northeast-1:000000000000:fleet/fleet-00000000-0000-0000-0000-000000000000",
+    "ComputeName": "example-compute",
+    "ComputeArn": "arn:aws:gamelift:ap-northeast-1:000000000000:compute/example-compute",
+    "AuthToken": "00000000-0000-0000-0000-000000000000",
+    "ExpirationTimestamp": "2025-01-07T13:52:41+09:00"
+}

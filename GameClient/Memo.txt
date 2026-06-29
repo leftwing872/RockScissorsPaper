@@ -1,0 +1,21 @@
+dotnet add package AWSSDK.EventBridge
+
+### Create Build ###
+dotnet publish --framework net8.0 -c debug -r linux-x64
+dotnet publish --framework net8.0 -c debug -r osx-arm64
+
+
+pwd > 
+/Users/eunhak/ws/dev/dotnet/GameClient
+
+./bin/Debug/net8.0/linux-x64
+./bin/Debug/net8.0/osx-arm64
+
+
+dotnet ./GameClient.dll
+
+
+
+#Windows 환경
+cd C:\GameClient\bin\Debug\net8.0\
+dotnet GameClient.dll

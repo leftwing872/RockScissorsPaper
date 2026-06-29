@@ -1,0 +1,23 @@
+# Build results
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+publish/
+
+# .NET
+*.user
+*.suo
+project.lock.json
+.vs/
+
+# macOS
+.DS_Store
+
+# Logs / runtime
+*.log
+game/logs/
+game/error/
+
+# Local config that may contain environment-specific values
+# (commit appsettings.example.json instead if needed)
