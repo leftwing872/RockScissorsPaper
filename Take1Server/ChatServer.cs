@@ -26,6 +26,8 @@ class ChatServer
 
     AWSCloudWatch acw = new AWSCloudWatch();
 
+    private readonly AgonesManager agones;
+
     public ChatServer()
     {
         listener = new TcpListener(IPAddress.Any, port);
@@ -33,6 +35,7 @@ class ChatServer
         cards = new Dictionary<String, int>();
         writeLog("Server is starting on port " + port);
         acw = new AWSCloudWatch();
+        agones = new AgonesManager(writeLog);
     }
 
     public void Start()
@@ -83,6 +86,10 @@ class ChatServer
         //     System.Threading.Thread.Sleep(2000);
         //     System.Environment.Exit(1);
         // }
+
+        // Tell the Agones sidecar this GameServer is up and can receive players.
+        // Health pings are then sent automatically by the SDK.
+        agones.Ready();
 
         listener.Start();
         writeLog("Server is listening on port " + port);
@@ -240,6 +247,9 @@ class ChatServer
                         clients[user.ID].IsReady = true;
                         if(clients.Count == 2 && clients.Values.All(c => c.IsReady))
                         {
+                            // Both players are ready and the match is starting: self-allocate
+                            // so Agones protects this GameServer from scale-down / fleet updates.
+                            agones.Allocate();
                             BroadCast(user.ID, getMsgCode(MsgCode.Start));
                         }
                     }                    
@@ -288,6 +298,9 @@ class ChatServer
                                     //     System.Threading.Thread.Sleep(2000);
                                     //     System.Environment.Exit(1);
                                     // }
+
+                                    // Match finished: ask Agones to shut the GameServer down so the Pod is recycled.
+                                    agones.Shutdown();
                                     System.Threading.Thread.Sleep(2000);
                                     System.Environment.Exit(0);
                                 }

@@ -1,0 +1,21 @@
+# Local build artifacts - rebuilt inside the image, must not leak into context.
+bin/
+obj/
+
+# Game runtime output / logs created during local runs.
+game/
+
+# Editor / OS noise
+.DS_Store
+**/.DS_Store
+.vs/
+.idea/
+
+# CI / container files themselves
+Dockerfile
+.dockerignore
+buildspec.yml
+
+# Misc
+memo.txt
+*.user
