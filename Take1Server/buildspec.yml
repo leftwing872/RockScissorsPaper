@@ -25,14 +25,14 @@ phases:
       - echo "Resolving account / repository..."
       - AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
       - REPOSITORY_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${IMAGE_REPO_NAME}"
-      - echo "Repository: ${REPOSITORY_URI}"
+      - 'echo "Repository: ${REPOSITORY_URI}"'
       - echo "Logging in to Amazon ECR..."
       - aws ecr get-login-password --region "${AWS_DEFAULT_REGION}" | docker login --username AWS --password-stdin "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com"
       - echo "Ensuring ECR repository exists..."
       - aws ecr describe-repositories --repository-names "${IMAGE_REPO_NAME}" --region "${AWS_DEFAULT_REGION}" >/dev/null 2>&1 || aws ecr create-repository --repository-name "${IMAGE_REPO_NAME}" --region "${AWS_DEFAULT_REGION}"
       - COMMIT_HASH=$(echo "${CODEBUILD_RESOLVED_SOURCE_VERSION:-latest}" | cut -c1-7)
       - IMAGE_TAG="${COMMIT_HASH:-latest}"
-      - echo "Image tag: ${IMAGE_TAG}"
+      - 'echo "Image tag: ${IMAGE_TAG}"'
   build:
     commands:
       - echo "Building Docker image..."

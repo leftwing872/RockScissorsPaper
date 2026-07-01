@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agones 구조 — RockScissorsPaper</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px;
+    background: #f5f6f8; color: #1c1f26;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Apple SD Gothic Neo", sans-serif;
+    line-height: 1.55;
+  }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 36px 0 14px; padding-bottom: 6px; border-bottom: 2px solid #e2e5ea; }
+  .sub { color: #6b7280; font-size: 14px; margin-bottom: 8px; }
+  .wrap { max-width: 960px; margin: 0 auto; }
+
+  /* 클러스터 박스 */
+  .cluster {
+    border: 2px solid #3b6fb6; border-radius: 14px;
+    background: #eef4fb; padding: 18px 18px 22px;
+  }
+  .label {
+    display: inline-block; font-size: 12px; font-weight: 700;
+    letter-spacing: .04em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 6px; margin-bottom: 12px;
+  }
+  .label.cluster-l { background: #3b6fb6; color: #fff; }
+  .label.node-l    { background: #5a7d9a; color: #fff; }
+  .label.fleet-l   { background: #2f8f6b; color: #fff; }
+
+  .node {
+    border: 2px dashed #8aa4c0; border-radius: 12px;
+    background: #fbfdff; padding: 14px; margin-top: 4px;
+  }
+
+  .pods { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
+  .pod {
+    flex: 1 1 240px; border: 2px solid #c7d2e0; border-radius: 10px;
+    background: #fff; padding: 12px; min-width: 230px;
+  }
+  .pod-title { font-weight: 700; font-size: 13px; color: #475569; margin-bottom: 10px; }
+  .containers { display: flex; flex-direction: column; gap: 8px; }
+  .box {
+    border-radius: 8px; padding: 9px 11px; font-size: 13px;
+  }
+  .gs   { background: #e7f1ff; border: 1.5px solid #4a86d6; }
+  .side { background: #eafaf2; border: 1.5px solid #34a877; }
+  .box .t { font-weight: 700; display: block; margin-bottom: 2px; }
+  .box .d { font-size: 12px; color: #5b6573; }
+  .grpc {
+    text-align: center; font-size: 11px; color: #2f8f6b;
+    margin: 2px 0; font-weight: 600;
+  }
+  .state {
+    display:inline-block; font-size:11px; font-weight:700; padding:1px 7px;
+    border-radius:5px; background:#34a877; color:#fff; margin-left:6px;
+  }
+  .state.ready { background:#34a877; }
+  .state.alloc { background:#d98b2b; }
+
+  /* 화살표 / 흐름 */
+  .flow {
+    background: #fff; border: 1px solid #e2e5ea; border-radius: 12px;
+    padding: 6px 0; margin-top: 4px;
+  }
+  .step { display: flex; align-items: flex-start; gap: 14px; padding: 13px 18px; border-bottom: 1px solid #f0f2f5; }
+  .step:last-child { border-bottom: none; }
+  .num {
+    flex: 0 0 28px; width: 28px; height: 28px; border-radius: 50%;
+    background: #3b6fb6; color: #fff; font-weight: 700; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step .body { font-size: 14px; }
+  .step .body b { color: #1c1f26; }
+  code {
+    background: #eef1f5; padding: 1px 6px; border-radius: 5px;
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px;
+    color: #b03060;
+  }
+
+  /* 포트 다이어그램 */
+  .ports { display:flex; align-items:center; gap:0; flex-wrap:wrap; margin-top:6px; }
+  .pchip {
+    border-radius:10px; padding:12px 14px; text-align:center; font-size:13px;
+    border:2px solid; min-width:150px;
+  }
+  .pchip .big { font-weight:700; font-size:15px; display:block; }
+  .pchip .sm { font-size:11.5px; color:#5b6573; }
+  .client { background:#fff3e6; border-color:#d98b2b; }
+  .host   { background:#eef4fb; border-color:#3b6fb6; }
+  .ctr    { background:#e7f1ff; border-color:#4a86d6; }
+  .arrow { flex:0 0 auto; color:#94a3b8; font-size:24px; padding:0 12px; font-weight:700; }
+  .arrow small { display:block; font-size:10px; color:#94a3b8; font-weight:600; }
+
+  .legend { display:flex; gap:18px; flex-wrap:wrap; margin-top:14px; font-size:12.5px; color:#5b6573; }
+  .legend span { display:flex; align-items:center; gap:6px; }
+  .dot { width:12px; height:12px; border-radius:3px; display:inline-block; }
+  .note { font-size:13px; color:#5b6573; margin-top:10px; background:#fff8e6; border-left:3px solid #d98b2b; padding:9px 12px; border-radius:0 8px 8px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Agones 구조 한눈에 보기</h1>
+  <div class="sub">RockScissorsPaper 서버 기준 · Kubernetes 위에서 게임 서버를 띄우고 할당하는 방식</div>
+
+  <!-- ============ 1. 클러스터 계층 ============ -->
+  <h2>1. 계층 구조 — 클러스터 안에 뭐가 들어있나</h2>
+
+  <div class="cluster">
+    <span class="label cluster-l">Kubernetes Cluster</span>
+
+    <div class="node">
+      <span class="label node-l">Node (물리/가상 머신 1대)</span>
+      <div class="pods">
+
+        <div class="pod">
+          <div class="pod-title">📦 GameServer Pod #1 <span class="state ready">Ready</span></div>
+          <div class="containers">
+            <div class="box gs">
+              <span class="t">rsp-server 컨테이너</span>
+              <span class="d">내 .NET 서버 · <code>:7777</code> listen · 2인 한 판</span>
+            </div>
+            <div class="grpc">⇅ gRPC localhost:9357</div>
+            <div class="box side">
+              <span class="t">Agones 사이드카</span>
+              <span class="d">Ready / Health / Shutdown 중계</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pod">
+          <div class="pod-title">📦 GameServer Pod #2 <span class="state alloc">Allocated</span></div>
+          <div class="containers">
+            <div class="box gs">
+              <span class="t">rsp-server 컨테이너</span>
+              <span class="d">내 .NET 서버 · <code>:7777</code> listen · 매치 진행중</span>
+            </div>
+            <div class="grpc">⇅ gRPC localhost:9357</div>
+            <div class="box side">
+              <span class="t">Agones 사이드카</span>
+              <span class="d">상태 보고 중계</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="note">
+        같은 노드 위 두 파드 모두 컨테이너 안에서는 <code>:7777</code>을 쓴다.
+        충돌하지 않는 이유는 → 아래 3번 포트 매핑 참고.
+      </div>
+    </div>
+
+    <div style="margin-top:14px; display:flex; gap:14px; flex-wrap:wrap;">
+      <div class="pod" style="flex:1 1 100%; border-color:#9ec5a8; background:#f3fbf6;">
+        <div class="pod-title" style="color:#2f8f6b;">🛠️ Agones System (클러스터 두뇌, agones-system 네임스페이스)</div>
+        <div class="d" style="font-size:12.5px; color:#5b6573;">
+          Controller가 GameServer/Fleet 리소스를 감시하며 파드를 만들고, 노드 포트를 배정하고,
+          죽은 서버를 재시작한다. 각 파드에 사이드카를 자동으로 끼워 넣는 것도 이 친구.
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><span class="dot" style="background:#4a86d6;"></span> 내 게임 서버 컨테이너</span>
+      <span><span class="dot" style="background:#34a877;"></span> Agones가 자동 주입하는 사이드카</span>
+      <span><span class="dot" style="background:#34a877;border-radius:50%;"></span> Ready = 매치 대기중</span>
+      <span><span class="dot" style="background:#d98b2b;border-radius:50%;"></span> Allocated = 매치 잡힘</span>
+    </div>
+  </div>
+
+  <!-- ============ 2. Fleet & Allocation ============ -->
+  <h2>2. Fleet & Allocation — 여러 개를 미리 띄워두고 하나씩 꺼내쓰기</h2>
+
+  <div class="cluster" style="background:#f3fbf6; border-color:#2f8f6b;">
+    <span class="label fleet-l">Fleet — replicas: 3 (항상 Ready 3개 유지)</span>
+    <div class="pods">
+      <div class="pod"><div class="pod-title">GameServer <span class="state ready">Ready</span></div><div class="box gs"><span class="d">대기중</span></div></div>
+      <div class="pod"><div class="pod-title">GameServer <span class="state ready">Ready</span></div><div class="box gs"><span class="d">대기중</span></div></div>
+      <div class="pod"><div class="pod-title">GameServer <span class="state alloc">Allocated</span></div><div class="box gs"><span class="d">← 방금 할당됨</span></div></div>
+    </div>
+    <div class="note" style="background:#eef4fb; border-color:#3b6fb6;">
+      매치메이커가 <b>GameServerAllocation</b>을 요청하면 → Agones가 Ready 중 하나를 골라
+      <b>Allocated</b>로 바꾸고 잠근다(다시 안 배정됨). 빈자리가 생기면 Fleet이 새 Ready를 자동 보충해 항상 3개를 채운다.
+    </div>
+  </div>
+
+  <!-- ============ 3. 포트 매핑 ============ -->
+  <h2>3. 포트는 어떻게 연결되나 (네가 헷갈렸던 부분)</h2>
+
+  <div class="flow" style="padding:18px;">
+    <div class="ports">
+      <div class="pchip client">
+        <span class="big">클라이언트</span>
+        <span class="sm">게임 플레이어</span>
+      </div>
+      <div class="arrow">→<small>접속</small></div>
+      <div class="pchip host">
+        <span class="big">노드IP : 7361</span>
+        <span class="sm">hostPort (동적 배정)</span>
+      </div>
+      <div class="arrow">→<small>매핑</small></div>
+      <div class="pchip ctr">
+        <span class="big">컨테이너 : 7777</span>
+        <span class="sm">containerPort (코드 고정)</span>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:18px;">
+      <b>핵심:</b> Dockerfile / YAML의 <code>containerPort: 7777</code>은 컨테이너 <b>안쪽</b> 고정 포트(= 코드의 <code>port = 7777</code>).
+      외부에서 실제 접속하는 포트는 Agones가 노드에서 <b>겹치지 않게 자동으로 골라준</b> <code>hostPort</code>(예: 7361)다.
+      그래서 같은 노드에 7777짜리 서버를 여러 개 띄워도 충돌하지 않는다.
+    </div>
+
+    <div style="margin-top:6px;">
+      <div class="step">
+        <div class="num">1</div>
+        <div class="body">YAML에 <code>portPolicy: Dynamic</code> + <code>containerPort: 7777</code> 지정 → Agones가 노드 포트(예 7361)를 자동 배정</div>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <div class="body">매치메이커가 <b>Allocation</b> 요청 → 응답으로 <code>address: 노드IP</code> + <code>port: 7361</code> 을 받음</div>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <div class="body">클라이언트는 <b>노드IP : 7361</b> 로 TCP 접속 → 노드가 컨테이너 <code>:7777</code> 로 전달 → 내 서버가 받음</div>
+      </div>
+    </div>
+
+    <div class="note">
+      웹 서비스와 달리 게임 서버는 <b>Service/Ingress/로드밸런서를 거치지 않는다.</b>
+      저지연을 위해 클라이언트가 노드에 직접 붙고, Kubernetes의 hostPort(iptables 매핑)를 쓴다. 별도 프록시 계층이 없어 지연이 거의 없다.
+    </div>
+  </div>
+
+  <!-- ============ 4. 라이프사이클 ============ -->
+  <h2>4. 한 서버의 일생 (코드 기준)</h2>
+  <div class="flow">
+    <div class="step"><div class="num">1</div><div class="body"><b>부팅</b> → <code>ConnectAsync()</code> 로 사이드카에 연결</div></div>
+    <div class="step"><div class="num">2</div><div class="body"><b>준비 완료</b> → <code>ReadyAsync()</code> "나 매치 받을 수 있어" → 상태 <span class="state ready">Ready</span></div></div>
+    <div class="step"><div class="num">3</div><div class="body"><b>살아있음 증명</b> → 2초마다 <code>HealthAsync()</code> 핑 (백그라운드 루프)</div></div>
+    <div class="step"><div class="num">4</div><div class="body"><b>할당됨</b> → 매치메이커가 잡으면 상태 <span class="state alloc">Allocated</span> · 클라이언트 2명 접속</div></div>
+    <div class="step"><div class="num">5</div><div class="body"><b>한 판 종료</b> (GameOver) → <code>ShutdownAsync()</code> → 파드 정리 → Fleet이 새 Ready 보충</div></div>
+  </div>
+
+</div>
+</body>
+</html>
