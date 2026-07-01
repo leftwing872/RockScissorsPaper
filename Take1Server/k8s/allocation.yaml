@@ -1,0 +1,11 @@
+# Allocation — claims one Ready server from the fleet (Ready -> Allocated).
+# Run with: kubectl create -f allocation.yaml
+# Then read status.address / status.ports[].port to hand to the client.
+apiVersion: allocation.agones.dev/v1
+kind: GameServerAllocation
+metadata:
+  generateName: rsp-alloc-
+spec:
+  selectors:
+    - matchLabels:
+        agones.dev/fleet: rsp-fleet

@@ -1,0 +1,29 @@
+# Fleet — keeps `replicas` GameServers warm in Ready state.
+apiVersion: agones.dev/v1
+kind: Fleet
+metadata:
+  name: rsp-fleet
+spec:
+  replicas: 3                    # number of Ready servers kept warm
+  template:
+    spec:
+      ports:
+        - name: default
+          containerPort: 7777
+          protocol: TCP
+      health:
+        initialDelaySeconds: 5
+        periodSeconds: 5
+        failureThreshold: 3
+      template:
+        spec:
+          containers:
+            - name: rsp-server
+              image: 367833968741.dkr.ecr.ap-northeast-2.amazonaws.com/take1server:d7ad8d5
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 200m
+                  memory: 128Mi

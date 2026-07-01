@@ -1,0 +1,27 @@
+# Single GameServer — use this to validate the image reaches STATE: Ready.
+# Delete after validation and use fleet.yaml for real workloads.
+apiVersion: agones.dev/v1
+kind: GameServer
+metadata:
+  name: rsp-server
+spec:
+  ports:
+    - name: default
+      containerPort: 7777      # must match the code's TCP port
+      protocol: TCP
+  health:
+    initialDelaySeconds: 5     # grace before first health ping is required
+    periodSeconds: 5           # code pings every 2s, so 5s leaves headroom
+    failureThreshold: 3
+  template:
+    spec:
+      containers:
+        - name: rsp-server
+          image: 367833968741.dkr.ecr.ap-northeast-2.amazonaws.com/take1server:d7ad8d5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi

@@ -21,3 +21,6 @@ game/error/
 
 # Local config that may contain environment-specific values
 # (commit appsettings.example.json instead if needed)
+
+# Private daily work journal (contains concrete infra details: SG IDs, office IP)
+WORKLOG.md

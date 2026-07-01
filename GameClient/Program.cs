@@ -105,9 +105,28 @@ if(!IsManualMatch)
 
 
 TcpClient tcpClient = new TcpClient();
-IPAddress iPAddress = IPAddress.Parse(IP);
-Console.WriteLine("Trying to connect server");
-tcpClient.Connect(iPAddress, PORT);
+
+if (String.IsNullOrWhiteSpace(IP) || PORT <= 0 || PORT > 65535)
+{
+    Console.WriteLine("Invalid server address or port. IP: '" + IP + "', PORT: " + PORT);
+    System.Environment.Exit(1);
+}
+
+Console.WriteLine("Trying to connect server: " + IP + ":" + PORT);
+try
+{
+    // Accept both IP literals (e.g. "127.0.0.1") and DNS host names
+    // (e.g. "ec2-3-39-244-4.ap-northeast-2.compute.amazonaws.com").
+    // TcpClient.Connect(string, int) resolves host names via DNS and also
+    // handles raw IP strings, unlike IPAddress.Parse which only accepts IPs.
+    tcpClient.Connect(IP, PORT);
+}
+catch (Exception ex)
+{
+    Console.WriteLine("Failed to connect to server (" + IP + ":" + PORT + "): " + ex.Message);
+    System.Environment.Exit(1);
+}
+Console.WriteLine("Connected to server.");
 var client = new ChatClient(tcpClient, getRandomFruit());
 
 client.Send(client.getMsgCode(MsgCode.Ready) + PlayerSessionId);
